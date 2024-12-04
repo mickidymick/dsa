@@ -1,0 +1,17 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-g",
+      "-I",
+      "/homes/jmcmicha/dml_lib/include/dml",
+      "-o",
+      "dsa",
+      "dsa.c"
+    ],
+    "directory": "/homes/jmcmicha/projects/dsa",
+    "file": "/homes/jmcmicha/projects/dsa/dsa.c",
+    "output": "/homes/jmcmicha/projects/dsa/dsa"
+  }
+]
