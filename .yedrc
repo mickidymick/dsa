@@ -1,4 +1,0 @@
-set builder-build-command           'bear -- make rebuild'
-set use-ctags                       'yes'
-set ctags-flags                     '-R src build'
-set ctags-enable-extra-highlighting 'yes'
