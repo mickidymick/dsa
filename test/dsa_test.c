@@ -6,18 +6,19 @@
 #include "utils.h"
 #include "dsa.h"
 
-#define MEMCPY
+/* #define MEMCPY */
 /* #define DSA_SYNC */
 /* #define DSA_THREADED_SYNC */
 /* #define DSA_BATCHED_SYNC */
+/* #define DSA_ASYNC */
 /* #define DSA_ASYNC_LOOP */
-/* #define DSA_THREADED_ASYNC */
+#define DSA_THREADED_ASYNC
 
 int main(int argc, char *argv[]) {
     int       i;
     void     *region1, *region2;
     ssize_t   region_size;
-    uint64_t  cur, end, start, dur;
+    uint64_t  cur, end, start, dur, mid;
     uint64_t  r1_value, r2_value_mig;
 
     if (argc < 2) {
@@ -35,10 +36,12 @@ int main(int argc, char *argv[]) {
     printf("\n");
 
     printf("Allocate Region1 ........................ "); fflush(stdout);
-    region1 = allocate(region_size, (const unsigned long *)DRAM_NODEMASK);
+    region1 = allocate(region_size, (int)DRAM_NODE);
+/*     region1 = allocate(region_size, (const unsigned long *)DRAM_NODEMASK, (unsigned long)MAX_NODEMASK); */
 
     printf("Allocate Region2 ........................ "); fflush(stdout);
-    region2 = allocate(region_size, (const unsigned long *)PMEM_NODEMASK);
+    region2 = allocate(region_size, (int)PMEM_NODE);
+/*     region2 = allocate(region_size, (const unsigned long *)PMEM_NODEMASK, (unsigned long)MAX_NODEMASK); */
 
     printf("populating region1 (pre-fault) .......... "); fflush(stdout);
     populate_region(region1, region_size, 1);
@@ -75,10 +78,44 @@ int main(int argc, char *argv[]) {
 #endif
 
 #ifdef DSA_BATCHED_SYNC
-    printf("migrating region1 down dsa_batched_sync.. "); fflush(stdout);
+    printf("Not Written\n");
+/*     printf("migrating region1 down dsa_batched_sync.. "); fflush(stdout); */
+/*     start = getns(); */
+
+/*     dsa_batched_sync_copy(region2, region1, region_size); */
+#endif
+
+#ifdef DSA_ASYNC
+    printf("migrating region1 down dsa_async ........ "); fflush(stdout);
     start = getns();
 
-    dsa_batched_sync_copy(region2, region1, region_size);
+    uint64_t num_jobs_running = 0;
+    uint64_t dml_arr_size = (uint64_t)region_size / (uint64_t)VMEM_PAGE_SIZE;
+    dml_job_t **job_arr = malloc(sizeof(dml_job_t *) * dml_arr_size);
+    for (uint64_t i = 0; i < dml_arr_size; i++) {
+        job_arr[i] = NULL;
+    }
+
+    uint64_t k = 0;
+    for( uint64_t i = 0; i < region_size; i += VMEM_PAGE_SIZE) {
+        job_arr[k] = dsa_async_copy_start(region2 + i, region1 + i, VMEM_PAGE_SIZE, i % 8);
+        num_jobs_running++;
+        k++;
+    }
+
+/*     printf("num_jobs:%lu\n", num_jobs_running); */
+
+    while (num_jobs_running > 0) {
+        for (uint64_t i = 0; i < dml_arr_size; i++) {
+            if (job_arr[i] != NULL && dml_check(job_arr[i]) == 1) {
+                dsa_async_copy_end(job_arr[i]);
+                job_arr[i] = NULL;
+                num_jobs_running--;
+            }
+        }
+    }
+
+    free(job_arr);
 #endif
 
 #ifdef DSA_ASYNC_LOOP

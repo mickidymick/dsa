@@ -59,25 +59,43 @@ void print_size(ssize_t size) {
     free(c);
 }
 
-void *allocate(ssize_t region_size, const unsigned long *nodemask) {
-    uint64_t start, dur;
-    void *region;
+void *allocate(ssize_t region_size, int node) {
+    uint64_t  start, dur;
+    void     *region;
 
     start  = getns();
-    region = mmap(NULL, region_size, (PROT_READ | PROT_WRITE),
-                    (MAP_PRIVATE | MAP_ANONYMOUS), -1, 0);
-    if (region == MAP_FAILED) {
-        perror ("region1 mmap failed");
-        exit(EXIT_FAILURE);
-    }
 
-    mbind(region, region_size, MPOL_BIND, nodemask, 3, 0);
+    region = numa_alloc_onnode(region_size, node);
 
     dur = getns() - start;
     print_time_stats(dur, region_size, 0);
 
     return region;
 }
+
+/* void *allocate(ssize_t region_size, const unsigned long *nodemask, unsigned long max_nodemask) { */
+/*     uint64_t  start, dur; */
+/*     void     *region; */
+
+/*     start  = getns(); */
+
+/*     region = mmap(NULL, region_size, (PROT_READ | PROT_WRITE), */
+/*                     (MAP_PRIVATE | MAP_ANONYMOUS), -1, 0); */
+/*     if (region == MAP_FAILED) { */
+/*         perror ("region1 mmap failed"); */
+/*         exit(EXIT_FAILURE); */
+/*     } */
+
+/*     if (mbind(region, region_size, MPOL_BIND, nodemask, max_nodemask, 0) < 0) { */
+/*         perror ("mbind failed"); */
+/*         exit(EXIT_FAILURE); */
+/*     } */
+
+/*     dur = getns() - start; */
+/*     print_time_stats(dur, region_size, 0); */
+
+/*     return region; */
+/* } */
 
 void populate_region(void *region, ssize_t region_size, char val) {
     uint64_t start, dur;

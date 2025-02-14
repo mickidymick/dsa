@@ -10,9 +10,10 @@ int        dml_check(dml_job_t *job_ptr);
 
 //Basic DSA Calls
 int        dsa_copy(void *dest, void *src, uint64_t buffer_size);
-dml_job_t *dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size);
+dml_job_t *dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size, int node);
 int        dsa_async_copy_end(dml_job_t *dml_job_ptr);
 void      *dsa_threaded_copy(void *arguments);
+void      *dsa_threaded_a_copy(void *arguments);
 int        dsa_batch_copy(void *dest, void *src, uint64_t buffer_size);
 
 //MAIN DSA Wrapper Functions
@@ -81,10 +82,10 @@ typedef enum
     DML_STATUS_NOT_SUPPORTED_BY_WQ              = 46u,   Work queue not configured to support operation
 
     // Initialization Errors
-    DML_STATUS_LIBACCEL_NOT_FOUND               = (DML_BASE_DRIVER_ERROR + 0u),   Unable to initialize job because hardware driver was not found
-    DML_STATUS_LIBACCEL_ERROR                   = (DML_BASE_DRIVER_ERROR + 1u),   Unable to initialize job because hardware driver API is incompatible
-    DML_STATUS_WORK_QUEUES_NOT_AVAILABLE        = (DML_BASE_DRIVER_ERROR + 2u),   Enabled work queues are not found
-    DML_STATUS_INIT_HW_NOT_SUPPORTED            = (DML_BASE_DRIVER_ERROR + 3u),   Error occured on hw initialization due to failure to write() to wq
+    DML_STATUS_LIBACCEL_NOT_FOUND               = 100u (DML_BASE_DRIVER_ERROR + 0u),   Unable to initialize job because hardware driver was not found
+    DML_STATUS_LIBACCEL_ERROR                   = 101u (DML_BASE_DRIVER_ERROR + 1u),   Unable to initialize job because hardware driver API is incompatible
+    DML_STATUS_WORK_QUEUES_NOT_AVAILABLE        = 102u (DML_BASE_DRIVER_ERROR + 2u),   Enabled work queues are not found
+    DML_STATUS_INIT_HW_NOT_SUPPORTED            = 103u (DML_BASE_DRIVER_ERROR + 3u),   Error occured on hw initialization due to failure to write() to wq
 } dml_status_t;
 */
 

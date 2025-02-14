@@ -69,7 +69,7 @@ int dsa_copy(void *dest, void *src, uint64_t buffer_size) {
 }
 
 //Asyncronus DSA Copy Job Start
-dml_job_t *dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size) {
+dml_job_t *dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size, int node) {
     dml_path_t  execution_path = DML_PATH_HW; //hardware path
     dml_job_t  *dml_job_ptr    = NULL;
     uint32_t    size           = 0u;
@@ -96,6 +96,7 @@ dml_job_t *dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size) {
     dml_job_ptr->destination_first_ptr  = (uint8_t *)dest;
     dml_job_ptr->source_length          = buffer_size;
     dml_job_ptr->destination_length     = buffer_size;
+    dml_job_ptr->numa_id                = node;
 
     status = dml_submit_job(dml_job_ptr);
 
@@ -151,7 +152,7 @@ void *dsa_threaded_copy(void *arguments) {
 
         dml_job_ptr->operation              = DML_OP_MEM_MOVE;
         dml_job_ptr->flags                  = DML_FLAG_COPY_ONLY;
-    /*     dml_job_ptr->flags                  = DML_FLAG_COPY_ONLY | DML_FLAG_BLOCK_ON_FAULT; */
+/*         dml_job_ptr->flags                  = DML_FLAG_COPY_ONLY | DML_FLAG_BLOCK_ON_FAULT; */
         dml_job_ptr->source_first_ptr       = (uint8_t *)(src + i);
         dml_job_ptr->destination_first_ptr  = (uint8_t *)(dest + i);
         dml_job_ptr->source_length          = VMEM_PAGE_SIZE;
@@ -175,6 +176,47 @@ void *dsa_threaded_copy(void *arguments) {
             return NULL;
         }
     }
+}
+
+//Threaded Asyncronus DSA Copy
+void *dsa_threaded_a_copy(void *arguments) {
+    struct arg_struct *args        = arguments;
+    void              *src         = args->src;
+    void              *dest        = args->dest;
+    uint64_t          buffer_size  = args->buffer_size;
+    int               node         = args->node;
+
+    dml_path_t  execution_path = DML_PATH_HW; //hardware path
+    dml_job_t  *dml_job_ptr    = NULL;
+    uint32_t    size           = 0u;
+
+    uint64_t num_jobs_running = 0;
+    uint64_t dml_arr_size = (uint64_t)buffer_size / (uint64_t)VMEM_PAGE_SIZE;
+    dml_job_t **job_arr = malloc(sizeof(dml_job_t *) * dml_arr_size);
+    for (uint64_t i = 0; i < dml_arr_size; i++) {
+        job_arr[i] = NULL;
+    }
+
+    uint64_t k = 0;
+    for( uint64_t i = 0; i < buffer_size; i += VMEM_PAGE_SIZE) {
+        job_arr[k] = dsa_async_copy_start(dest + i, src + i, VMEM_PAGE_SIZE, node);
+        num_jobs_running++;
+        k++;
+    }
+
+/*     printf("num_jobs:%lu\n", num_jobs_running); */
+
+    while (num_jobs_running > 0) {
+        for (uint64_t i = 0; i < dml_arr_size; i++) {
+            if (job_arr[i] != NULL && dml_check(job_arr[i]) == 1) {
+                dsa_async_copy_end(job_arr[i]);
+                job_arr[i] = NULL;
+                num_jobs_running--;
+            }
+        }
+    }
+
+    free(job_arr);
 }
 
 int dsa_batch_copy(void *dest, void *src, uint64_t buffer_size) {
@@ -269,7 +311,8 @@ int dsa_loop_async_copy(void *dest, void *src, uint64_t buffer_size) {
         if (dml_arr_size < dml_arr_max_size) {
 do_copy:
 /*             printf("start copy\n"); */
-            tmp_dml_job_ptr = dsa_async_copy_start(dest + (i * VMEM_PAGE_SIZE), src + (i * VMEM_PAGE_SIZE), VMEM_PAGE_SIZE);
+            tmp_dml_job_ptr = dsa_async_copy_start(dest + (i * VMEM_PAGE_SIZE), src + (i * VMEM_PAGE_SIZE), VMEM_PAGE_SIZE, 0);
+/*             tmp_dml_job_ptr = dsa_async_copy_start(dest + (i * VMEM_PAGE_SIZE), src + (i * VMEM_PAGE_SIZE), VMEM_PAGE_SIZE, i % 4); */
 /*             printf("job_ptr:%p\n", tmp_dml_job_ptr); */
             if (tmp_dml_job_ptr == NULL) {
                 printf("ERROR: no job_ptr returned from dsa_async_copy_start!\n");
@@ -370,7 +413,7 @@ int dsa_threaded_sync_copy(void *dest, void *src, uint64_t buffer_size) {
 
     for (int i = 0; i < threads; i++) {
         a_arr[i]              = malloc(sizeof(struct arg_struct) * 1);
-        a_arr[i]->node        = i * 2;
+        a_arr[i]->node        = i % 4;
         a_arr[i]->src         = src + (i * size);
         a_arr[i]->dest        = dest + (i * size);
         a_arr[i]->buffer_size = size;
@@ -400,8 +443,9 @@ int dsa_threaded_async_copy(void *dest, void *src, uint64_t buffer_size) {
         a_arr[i]->src         = src + (i * size);
         a_arr[i]->dest        = dest + (i * size);
         a_arr[i]->buffer_size = size;
+        a_arr[i]->node        = i % 1;
 
-        pthread_create(&th_arr[i], NULL, dsa_threaded_copy, a_arr[i]);
+        pthread_create(&th_arr[i], NULL, dsa_threaded_a_copy, a_arr[i]);
     }
     for (int i = 0; i < threads; i++) {
         pthread_join(th_arr[i], NULL);
