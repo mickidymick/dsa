@@ -6,53 +6,39 @@
       "-g",
       "-Iinclude",
       "-o",
-      "dsa",
+      "dsa_test",
+      "dsa_test.c"
+    ],
+    "directory": "/homes/jmcmicha/projects/dsa/test",
+    "file": "/homes/jmcmicha/projects/dsa/test/dsa_test.c",
+    "output": "/homes/jmcmicha/projects/dsa/test/dsa_test"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Iinclude",
+      "-o",
+      "dsa_test",
+      "utils.c"
+    ],
+    "directory": "/homes/jmcmicha/projects/dsa/test",
+    "file": "/homes/jmcmicha/projects/dsa/test/utils.c",
+    "output": "/homes/jmcmicha/projects/dsa/test/dsa_test"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Iinclude",
+      "-o",
+      "dsa_test",
       "dsa.c"
     ],
     "directory": "/homes/jmcmicha/projects/dsa/test",
     "file": "/homes/jmcmicha/projects/dsa/test/dsa.c",
-    "output": "/homes/jmcmicha/projects/dsa/test/dsa"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Iinclude",
-      "-o",
-      "test_dsa",
-      "test_dsa.c"
-    ],
-    "directory": "/homes/jmcmicha/projects/dsa/test",
-    "file": "/homes/jmcmicha/projects/dsa/test/test_dsa.c",
-    "output": "/homes/jmcmicha/projects/dsa/test/test_dsa"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Iinclude",
-      "-o",
-      "async_dsa",
-      "async_dsa.c"
-    ],
-    "directory": "/homes/jmcmicha/projects/dsa/test",
-    "file": "/homes/jmcmicha/projects/dsa/test/async_dsa.c",
-    "output": "/homes/jmcmicha/projects/dsa/test/async_dsa"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Iinclude",
-      "-o",
-      "small_async_dsa",
-      "small_async_dsa.c"
-    ],
-    "directory": "/homes/jmcmicha/projects/dsa/test",
-    "file": "/homes/jmcmicha/projects/dsa/test/small_async_dsa.c",
-    "output": "/homes/jmcmicha/projects/dsa/test/small_async_dsa"
+    "output": "/homes/jmcmicha/projects/dsa/test/dsa_test"
   }
 ]

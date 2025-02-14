@@ -99,6 +99,10 @@ dml_job_t *dsa_copy_start(void *src, void *dest, long long buffer_size) {
     dml_job_ptr->destination_length     = buffer_size;
 
     status = dml_submit_job(dml_job_ptr);
+    if (status != DML_STATUS_OK) {
+        printf("FUCK!\n");
+        printf("An error (%u) occurred during getting job size.\n", status);
+    }
 
     //printf("Job Started Successfully.\n");
     return dml_job_ptr;
@@ -172,6 +176,122 @@ printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f
         (region_GBs / seconds));
 }
 
+void *init(long long num_pages) {
+    void *region;
+    uint64_t cur, end, v, ret;
+    char *str;
+
+    str = (char *)malloc(1024);
+    ssize_t region_size = VMEM_PAGE_SIZE * num_pages;
+    bytes2str(region_size, str);
+    printf("init regions: num_pages:%lld tot_size:%s\n", num_pages, str);
+
+    region = mmap(NULL, region_size, (PROT_READ | PROT_WRITE),
+                    (MAP_PRIVATE | MAP_ANONYMOUS), -1, 0);
+    if (region == MAP_FAILED) {
+        perror ("r1 mmap failed");
+        exit(EXIT_FAILURE);
+    }
+
+    return region;
+}
+
+int dml_check(dml_job_t *job_ptr) {
+    dml_status_t status = dml_check_job(job_ptr);
+    if (status == DML_STATUS_OK) {
+        return 1;
+    } else if (status == DML_STATUS_BEING_PROCESSED) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+int async_loop(int max_jobs, int num_pages, void *r1, void *r2) {
+    int dml_arr_max_size = max_jobs;
+    int dml_arr_size = 0;
+    dml_job_t *tmp_dml_job_ptr;
+    dml_job_t *job_arr[dml_arr_max_size];
+    for (int i = 0; i < dml_arr_max_size; i++) {
+        job_arr[i] = NULL;
+    }
+
+    //loop over region page by page
+    for (long long i = 0; i < num_pages; i++) {
+/*         printf("page:%lld total:%d\n", i, num_pages); */
+
+        //if we can submit a new job
+        if (dml_arr_size < dml_arr_max_size) {
+do_copy:
+/*             printf("start copy\n"); */
+            tmp_dml_job_ptr = dsa_copy_start(r1 + (i * VMEM_PAGE_SIZE), r2 + (i * VMEM_PAGE_SIZE), VMEM_PAGE_SIZE);
+/*             printf("job_ptr:%p\n", tmp_dml_job_ptr); */
+            if (tmp_dml_job_ptr == NULL) {
+                printf("ERROR!\n");
+                return 1;
+            }
+
+            //add job to arr
+            for (int i = 0; i < dml_arr_max_size; i++) {
+                if (job_arr[i] == NULL) {
+                    job_arr[i] = tmp_dml_job_ptr;
+                    dml_arr_size += 1;
+/*                     printf("added job\n"); */
+                    break;
+                }
+            }
+
+        } else {
+            while (dml_arr_size > 0) {
+/*                 printf("inside\n"); */
+/*                 printf("arr_size:%d\n", dml_arr_size); */
+/*                 printf("looking for completed job\n"); */
+                for (int i = 0; i < dml_arr_max_size; i++) {
+                    int status = dml_check(job_arr[i]);
+                    //job completed
+                    if (status == 1) {
+/*                         printf("job completed\n"); */
+                        free(job_arr[i]);
+                        job_arr[i] = NULL;
+                        dml_arr_size -= 1;
+                        goto do_copy;
+                    //job errored
+                    } else if (status != 0){
+                        printf("An error (%u) occurred during job finalization.\n", dml_check_job(job_arr[i]));
+                        return 1;
+                    }
+                }
+/*                 printf("waiting\n"); */
+            }
+        }
+    }
+
+    while (dml_arr_size > 0) {
+/*         printf("arr_size:%d\n", dml_arr_size); */
+/*         printf("looking for completed job\n"); */
+        for (int i = 0; i < dml_arr_max_size; i++) {
+/*             printf("job_arr[%d]: %p\n", i, job_arr[i]); */
+            if (job_arr[i] != NULL) {
+                int status = dml_check(job_arr[i]);
+                //job completed
+                if (status == 1) {
+/*                     printf("job completed\n"); */
+                    free(job_arr[i]);
+                    job_arr[i] = NULL;
+                    dml_arr_size -= 1;
+                //job errored
+                } else if (status != 0){
+                    printf("An error (%u) occurred during job finalization.\n", dml_check_job(job_arr[i]));
+                    return 1;
+                }
+            }
+        }
+/*         printf("waiting\n"); */
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     int       i;
     void     *region1, *region2;
@@ -179,17 +299,11 @@ int main(int argc, char *argv[]) {
     uint64_t  cur, end, start, dur;
     uint64_t  v, r1_value, r2_value, r1_value_mig, r2_value_mig;
 
-    if (argc < 2) {
-        fprintf(stderr, "%s region_size(MBs)\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
+    long long num_pages = 16;
 
-    region_size = atoll(argv[1]) * (1024L * 1024L);
-    char *tmp_str;
-    tmp_str = (char *)malloc(1024);
-    bytes2str(region_size, tmp_str);
-    printf("region size: %s\n", tmp_str);
+    region_size = num_pages * VMEM_PAGE_SIZE;
 
+    printf("init regions\n");
     region1 = mmap(NULL, region_size, (PROT_READ | PROT_WRITE),
                     (MAP_PRIVATE | MAP_ANONYMOUS), -1, 0);
     if (region1 == MAP_FAILED) {
@@ -203,139 +317,40 @@ int main(int argc, char *argv[]) {
         perror ("region2 mmap failed");
         exit(EXIT_FAILURE);
     }
-
     mbind(region1, region_size, MPOL_BIND, (const unsigned long *)DRAM_NODEMASK, 3, 0);
     mbind(region2, region_size, MPOL_BIND, (const unsigned long *)PMEM_NODEMASK, 3, 0);
 
-    r1_value = r2_value = r1_value_mig = r2_value_mig = 0;
+    printf("fault in pages\n");
+    memset((void *)region1, 1, region_size);
+    memset((void *)region2, 2, region_size);
 
-
-printf("populating region1 (pre-fault) ... "); fflush(stdout);
-
-    cur = (uint64_t) region1;
-    end = ((uint64_t) region1 + region_size);
-
-    start = getns();
-    memset((void *)cur, 1, region_size);
-    dur = getns() - start;
-
-    print_time_stats(dur, region_size);
-
-
-printf("populating region2 (pre-fault) ... "); fflush(stdout);
-
-    cur = (uint64_t) region2;
-    end = ((uint64_t) region2 + region_size);
-
-    start = getns();
-    memset((void *)cur, 0, region_size);
-    dur = getns() - start;
-
-    print_time_stats(dur, region_size);
-
-printf("accessing region1 (post-fault) ... "); fflush(stdout);
-
-    cur = (uint64_t) region1;
-    end = ((uint64_t) region1 + region_size);
-
-    start = getns();
+    cur = (uint64_t)region1;
     for (; cur < end; cur += sizeof(uint64_t)) {
         v         = *((uint64_t*)cur);
         r1_value += v;
     }
-    dur = getns() - start;
 
-    print_time_stats(dur, region_size);
+    printf("r1:%p end:%p\n", region1, region1 + (num_pages * VMEM_PAGE_SIZE));
+    printf("r2:%p end:%p\n", region2, region2 + (num_pages * VMEM_PAGE_SIZE));
 
-printf("migrating region1 down ........... \n"); fflush(stdout);
-
-    int len = region_size / VMEM_PAGE_SIZE;
-    printf("region_size: %lu\n", region_size);
-    printf("vmem_page_size: %d\n", VMEM_PAGE_SIZE);
-    printf("len: %d\n", len);
-
+    printf("migrating region1 down ........... \n"); fflush(stdout);
     start = getns();
-    //separate by vmem_page_size
-
-    //whole region
-/*     dsa_copy(region1, region2, region_size); */
-
-    //page by page
-/*     for (long long i; i < len; i++) { */
-/*         dsa_copy(region1 + (i * VMEM_PAGE_SIZE), region2 + (i * VMEM_PAGE_SIZE), VMEM_PAGE_SIZE); */
-/*     } */
-
-///*
-#define MAX_SIZE 16
-    int dml_arr_max_size = MAX_SIZE;
-    int dml_arr_size = 0;
-    dml_job_t *tmp_dml_job_ptr;
-    dml_job_t *job_arr[MAX_SIZE];
-    for (int i = 0; i < MAX_SIZE; i++) {
-        job_arr[i] = NULL;
+    if (async_loop(16, num_pages, region1, region2) == 1) {
+        return 1;
     }
-
-    //loop over all pages in region
-    for (long long i; i < len; i++) {
-/*         printf("i:%d len:%d\n", i, len); */
-        //if we can submit a new job
-        //printf("size: %d max:%d\n", dml_arr_size, dml_arr_max_size);
-        if (dml_arr_size < dml_arr_max_size) {
-do_copy:
-            //printf("do copy\n");
-            tmp_dml_job_ptr = dsa_copy_start(region1 + (i * VMEM_PAGE_SIZE), region2 + (i * VMEM_PAGE_SIZE), VMEM_PAGE_SIZE);
-            if (tmp_dml_job_ptr == NULL) {
-                printf("ERROR!\n");
-                return 0;
-            }
-
-            //add job to arr
-            for (int i = 0; i < dml_arr_max_size; i++) {
-                if (job_arr[i] == NULL) {
-                    job_arr[i] = tmp_dml_job_ptr;
-                    dml_arr_size += 1;
-                    break;
-                }
-            }
-        } else {
-            while (1) {
-                //printf("waiting!\n");
-                for (int i = 0; i < dml_arr_size; i++) {
-                    if (dml_check_job(job_arr[i]) == DML_STATUS_OK) {
-/*                         printf("job completed\n"); */
-                        free(job_arr[i]);
-                        job_arr[i] = NULL;
-                        dml_arr_size -= 1;
-                        goto do_copy;
-                    }
-                }
-                //sleep(1);
-            }
-        }
-    }
-//*/
     dur = getns() - start;
-
     print_time_stats(dur, region_size);
 
-printf("accessing region2 (post-mig) ..... "); fflush(stdout);
 
     cur = (uint64_t) region2;
     end = ((uint64_t) region2 + region_size);
-
-    start = getns();
     for (; cur < end; cur += sizeof(uint64_t)) {
         v             = *((uint64_t*)cur);
         r2_value_mig += v;
     }
-    dur = getns() - start;
-
-    print_time_stats(dur, region_size);
-
     if (r1_value != r2_value_mig) {
         printf("region1 values do not match: pre_mig: %lu post_mig: %lu\n",
                 r1_value, r2_value_mig);
-
     } else {
         printf("region1 value matches: %lu\n", r1_value);
     }

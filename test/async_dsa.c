@@ -158,7 +158,7 @@ void bytes2str(size_t bytes, char *str) {
     }
 }
 
-void print_time_stats(uint64_t dur, ssize_t region_size) {
+void print_time_stats(uint64_t dur, ssize_t region_size, int color) {
     ssize_t nr_vpages, nr_hpages;
     double  seconds, region_GBs;
 
@@ -167,9 +167,13 @@ void print_time_stats(uint64_t dur, ssize_t region_size) {
     nr_vpages  = (region_size / VMEM_PAGE_SIZE);
     nr_hpages  = (region_size / VMEM_H_PAGE_SIZE);
 
-printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f    GB/s: %10.2f\n",
-        ns2us(dur), (ns2us(dur) / nr_vpages), (ns2us(dur) / nr_hpages),
-        (region_GBs / seconds));
+    if (color == 1) {
+        printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f    \033[0;32m GB/s: %10.2f\n \033[0;32m",
+            ns2us(dur), (ns2us(dur) / nr_vpages), (ns2us(dur) / nr_hpages), (region_GBs / seconds));
+    } else {
+        printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f    GB/s: %10.2f\n",
+            ns2us(dur), (ns2us(dur) / nr_vpages), (ns2us(dur) / nr_hpages), (region_GBs / seconds));
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -302,7 +306,7 @@ do_copy:
                 //printf("waiting!\n");
                 for (int i = 0; i < dml_arr_size; i++) {
                     if (dml_check_job(job_arr[i]) == DML_STATUS_OK) {
-/*                         printf("job completed\n"); */
+                        printf("job completed\n");
                         free(job_arr[i]);
                         job_arr[i] = NULL;
                         dml_arr_size -= 1;
