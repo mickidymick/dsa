@@ -50,15 +50,6 @@ void print_time_stats(uint64_t dur, ssize_t region_size, int color) {
     }
 }
 
-void print_size(ssize_t size) {
-    char *c;
-
-    c = malloc(sizeof(char) * 1024);
-    bytes2str(size, c);
-    printf("Total Region Size: %s\n", c);
-    free(c);
-}
-
 void *allocate(ssize_t region_size, int node) {
     uint64_t  start, dur;
     void     *region;

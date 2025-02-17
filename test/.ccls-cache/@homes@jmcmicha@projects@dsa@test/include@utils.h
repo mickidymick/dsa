@@ -14,8 +14,8 @@
 
 #define DRAM_NODEMASK    (0x1ul)  //Node 0
 // #define PMEM_NODEMASK    (0x1ul)  //Node 0
-#define PMEM_NODEMASK    (0x2ul) //Node 1
-// #define PMEM_NODEMASK    (0x10ul) //Node 4
+// #define PMEM_NODEMASK    (0x2ul) //Node 1
+#define PMEM_NODEMASK    (0x10ul) //Node 4
 
 // #define MAX_NODEMASK (0x3ul) //Node1
 #define MAX_NODEMASK (0xfful) //Node4
@@ -23,22 +23,23 @@
 #define DRAM_NODE        0
 // #define PMEM_NODE        0
 // #define PMEM_NODE        1
-#define PMEM_NODE        2
-// #define PMEM_NODE        4
+// #define PMEM_NODE        2
+#define PMEM_NODE        4
 
-#define VMEM_PAGE_SIZE   4096   //4k
-// #define VMEM_PAGE_SIZE   1073741824   //1G
+// #define VMEM_PAGE_SIZE   4096       //4KB
+// #define VMEM_PAGE_SIZE   1048576    //1MB
+#define VMEM_PAGE_SIZE   2097152    //2MB
+// #define VMEM_PAGE_SIZE   1073741824 //1GB
 
 #define VMEM_H_PAGE_SIZE 4096 //4k
 #define MAX_JOBS         16
-#define MAX_BATCH_SIZE   32
+#define MAX_BATCH_SIZE   128
 
 uint64_t getns(void);
 double   ns2us(uint64_t ns);
 double   ns2ms(uint64_t ns);
 void     bytes2str(size_t bytes, char *str);
 void     print_time_stats(uint64_t dur, ssize_t region_size, int color);
-void     print_size(ssize_t size);
 void    *allocate(ssize_t region_size, int node);
 // void    *allocate(ssize_t region_size, const unsigned long *nodemask, unsigned long max_nodemask);
 void     populate_region(void *region, ssize_t region_size, char val);

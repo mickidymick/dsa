@@ -1,6 +1,7 @@
 #ifndef DSA_H
 #define DSA_H
 
+#define _GNU_SOURCE
 #include <pthread.h>
 #include "utils.h"
 #include "dml.h"
@@ -12,6 +13,8 @@ int        dml_check(dml_job_t *job_ptr);
 int        dsa_copy(void *dest, void *src, uint64_t buffer_size);
 dml_job_t *dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size, int node);
 int        dsa_async_copy_end(dml_job_t *dml_job_ptr);
+dml_job_t *dsa_async_batch_copy_start(void *dest, void *src, uint64_t buffer_size, int batch_size, int node);
+int        dsa_async_batch_copy_end(dml_job_t *dml_job_ptr);
 void      *dsa_threaded_copy(void *arguments);
 void      *dsa_threaded_a_copy(void *arguments);
 int        dsa_batch_copy(void *dest, void *src, uint64_t buffer_size);
