@@ -41,6 +41,7 @@ void print_time_stats(uint64_t dur, ssize_t region_size, int color) {
     nr_vpages  = (region_size / VMEM_PAGE_SIZE);
     nr_hpages  = (region_size / VMEM_H_PAGE_SIZE);
 
+#ifdef VERBOSE
     if (color == 1) {
         printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f    GB/s:\033[0;32m %10.2f \033[0m\n",
             ns2us(dur), (ns2us(dur) / nr_vpages), (ns2us(dur) / nr_hpages), (region_GBs / seconds));
@@ -48,6 +49,9 @@ void print_time_stats(uint64_t dur, ssize_t region_size, int color) {
         printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f    GB/s: %10.2f\n",
             ns2us(dur), (ns2us(dur) / nr_vpages), (ns2us(dur) / nr_hpages), (region_GBs / seconds));
     }
+#else
+        printf("%0.2f\n", (region_GBs / seconds));
+#endif
 }
 
 void *allocate(ssize_t region_size, int node) {
@@ -59,34 +63,13 @@ void *allocate(ssize_t region_size, int node) {
     region = numa_alloc_onnode(region_size, node);
 
     dur = getns() - start;
+
+#ifdef VERBOSE
     print_time_stats(dur, region_size, 0);
+#endif
 
     return region;
 }
-
-/* void *allocate(ssize_t region_size, const unsigned long *nodemask, unsigned long max_nodemask) { */
-/*     uint64_t  start, dur; */
-/*     void     *region; */
-
-/*     start  = getns(); */
-
-/*     region = mmap(NULL, region_size, (PROT_READ | PROT_WRITE), */
-/*                     (MAP_PRIVATE | MAP_ANONYMOUS), -1, 0); */
-/*     if (region == MAP_FAILED) { */
-/*         perror ("region1 mmap failed"); */
-/*         exit(EXIT_FAILURE); */
-/*     } */
-
-/*     if (mbind(region, region_size, MPOL_BIND, nodemask, max_nodemask, 0) < 0) { */
-/*         perror ("mbind failed"); */
-/*         exit(EXIT_FAILURE); */
-/*     } */
-
-/*     dur = getns() - start; */
-/*     print_time_stats(dur, region_size, 0); */
-
-/*     return region; */
-/* } */
 
 void populate_region(void *region, ssize_t region_size, char val) {
     uint64_t start, dur;
@@ -95,7 +78,9 @@ void populate_region(void *region, ssize_t region_size, char val) {
     memset(region, val, region_size);
     dur = getns() - start;
 
+#ifdef VERBOSE
     print_time_stats(dur, region_size, 0);
+#endif
 }
 
 uint64_t access_region(void *region, ssize_t region_size) {
@@ -113,7 +98,9 @@ uint64_t access_region(void *region, ssize_t region_size) {
     }
     dur = getns() - start;
 
+#ifdef VERBOSE
     print_time_stats(dur, region_size, 0);
+#endif
 
     return ret;
 }

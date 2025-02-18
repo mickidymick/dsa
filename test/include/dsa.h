@@ -10,20 +10,19 @@
 int        dml_check(dml_job_t *job_ptr);
 
 //Basic DSA Calls
-int        dsa_copy(void *dest, void *src, uint64_t buffer_size);
-dml_job_t *dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size, int node);
-int        dsa_async_copy_end(dml_job_t *dml_job_ptr);
-dml_job_t *dsa_async_batch_copy_start(void *dest, void *src, uint64_t buffer_size, int batch_size, int node);
-int        dsa_async_batch_copy_end(dml_job_t *dml_job_ptr);
-void      *dsa_threaded_copy(void *arguments);
-void      *dsa_threaded_a_copy(void *arguments);
-int        dsa_batch_copy(void *dest, void *src, uint64_t buffer_size);
+int        _dsa_sync_copy(void *dest, void *src, uint64_t buffer_size);
+dml_job_t *_dsa_async_copy_start(void *dest, void *src, uint64_t buffer_size, int node);
+int        _dsa_async_copy_end(dml_job_t *dml_job_ptr);
+dml_job_t *_dsa_async_batch_copy_start(void *dest, void *src, uint64_t buffer_size, dml_path_t execution_path, uint32_t job_size, int batch_size, int node);
+int        _dsa_async_batch_copy_end(dml_job_t *dml_job_ptr);
+void      *_dsa_threaded_async_copy(void *arguments);
 
 //MAIN DSA Wrapper Functions
-int        dsa_loop_async_copy(void *dest, void *src, uint64_t buffer_size);
-int        dsa_threaded_sync_copy(void *dest, void *src, uint64_t buffer_size);
-int        dsa_threaded_async_copy(void *dest, void *src, uint64_t buffer_size);
-int        dsa_batched_sync_copy(void *dest, void *src, uint64_t buffer_size);
+int        cpu_copy(void *dest, void *src, uint64_t region_size, uint64_t transfer_size);
+int        dsa_sync_copy(void *dest, void *src, uint64_t region_size, uint64_t transfer_size);
+int        dsa_async_copy(void *dest, void *src, uint64_t region_size, uint64_t transfer_size);
+int        dsa_batched_async_copy(void *dest, void *src, uint64_t region_size, uint64_t transfer_size);
+int        dsa_threaded_async_copy(void *dest, void *src, uint64_t region_size, uint64_t transfer_size);
 
 struct arg_struct {
     int   node;
