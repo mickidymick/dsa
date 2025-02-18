@@ -16,10 +16,10 @@ test: dsa_test
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 32
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 128
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 512
-	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 1024
+# 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 1024
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 4096
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 8192
-# 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 16384
+	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 16384
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 10 ./dsa_test 32768
 
 gdb: dsa_test

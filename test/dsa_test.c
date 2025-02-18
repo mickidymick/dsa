@@ -8,8 +8,8 @@
 
 /* #define MEMCPY */
 /* #define DSA_SYNC */
-#define DSA_ASYNC
-/* #define DSA_BATCHED_ASYNC */
+/* #define DSA_ASYNC */
+#define DSA_BATCHED_ASYNC
 /* #define DSA_THREADED_ASYNC */
 
 int main(int argc, char *argv[]) {
