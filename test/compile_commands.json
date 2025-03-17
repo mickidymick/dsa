@@ -3,7 +3,6 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-g",
       "-o3",
       "-Iinclude",
       "-o",
@@ -18,7 +17,6 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-g",
       "-o3",
       "-Iinclude",
       "-o",
@@ -33,7 +31,6 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-g",
       "-o3",
       "-Iinclude",
       "-o",

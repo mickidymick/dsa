@@ -17,6 +17,92 @@ int dml_check(dml_job_t *job_ptr) {
 
 
 //   ---Basic DSA Calls---
+int _dsa_init(int src_node, int dest_node) {
+    uint64_t    start;
+    uint64_t    dur;
+    dml_path_t  execution_path = DML_PATH_HW; //hardware path
+    dml_job_t  *dml_job_ptr    = NULL;
+    uint32_t    size           = 0u;
+    uint64_t    buffer_size    = VMEM_PAGE_SIZE * 2;
+    void *src, *dest;
+    long  ret1, ret2;
+
+    printf("dsa_init\n");
+/*     printf("mmap\n"); fflush(stdout); */
+    src  = mmap(NULL, buffer_size, (PROT_READ | PROT_WRITE), MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    dest = mmap(NULL, buffer_size, (PROT_READ | PROT_WRITE), MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (src == NULL || dest == NULL) {
+        perror("mmap failed");
+        return 1;
+    }
+/*     printf("mmap\n"); fflush(stdout); */
+
+/*     printf("mbind\n"); fflush(stdout); */
+    unsigned long d_nm = DRAM_NODEMASK;
+    unsigned long p_nm = PMEM_NODEMASK;
+    ret1 = mbind(src, buffer_size, MPOL_BIND, &d_nm, MAX_NODEMASK, 0);
+    ret2 = mbind(dest, buffer_size, MPOL_BIND, &p_nm, MAX_NODEMASK, 0);
+    if (ret1 == -1 || ret2 == -1) {
+        perror("mbind failed");fflush(stderr);
+        return 1;
+    }
+/*     printf("mbind\n"); fflush(stdout); */
+
+/*     printf("memset\n"); fflush(stdout); */
+    memset(src, 1, buffer_size);
+    memset(dest, 0, buffer_size);
+/*     printf("memset\n"); fflush(stdout); */
+/*     src  = numa_alloc_onnode(buffer_size, src_node); */
+/*     dest = numa_alloc_onnode(buffer_size, dest_node); */
+/*     memset(src, 1, buffer_size); */
+/*     memset(dest, 0, buffer_size); */
+
+    dml_status_t status = dml_get_job_size(execution_path, &size);
+    if (DML_STATUS_OK != status) {
+        printf("An error (%u) occurred during getting job size.\n", status);
+        return 1;
+    }
+
+    dml_job_ptr = (dml_job_t *)malloc(size);
+
+    status = dml_init_job(execution_path, dml_job_ptr);
+    if (DML_STATUS_OK != status) {
+        printf("An error (%u) occurred during job initialization.\n", status);
+        free(dml_job_ptr);
+        return 1;
+    }
+
+    dml_job_ptr->operation              = DML_OP_MEM_MOVE;
+/*     dml_job_ptr->flags                  = DML_FLAG_COPY_ONLY | DML_FLAG_PREFETCH_CACHE; */
+    dml_job_ptr->flags                  = DML_FLAG_COPY_ONLY | DML_FLAG_BLOCK_ON_FAULT;
+    dml_job_ptr->source_first_ptr       = (uint8_t *)src;
+    dml_job_ptr->destination_first_ptr  = (uint8_t *)dest;
+    dml_job_ptr->source_length          = buffer_size;
+    dml_job_ptr->destination_length     = buffer_size;
+
+    status = dml_execute_job(dml_job_ptr, DML_WAIT_MODE_BUSY_POLL);
+    if (DML_STATUS_OK != status) {
+        printf("An error (%u) occurred during job execution.\n", status);
+        dml_finalize_job(dml_job_ptr);
+        free(dml_job_ptr);
+        return 1;
+    }
+
+    status = dml_finalize_job(dml_job_ptr);
+
+    free(dml_job_ptr);
+
+    if (DML_STATUS_OK != status) {
+        printf("An error (%u) occurred during job finalization.\n", status);
+        return 1;
+    }
+
+    munmap(src, buffer_size);
+    munmap(dest, buffer_size);
+
+    return 0;
+}
+
 //Syncronous DSA Copy
 int _dsa_sync_copy(void *dest, void *src, uint64_t buffer_size) {
     uint64_t    start;
@@ -153,9 +239,10 @@ dml_job_t *_dsa_async_batch_copy_start(void *dest, void *src, uint64_t buffer_si
     dml_job_ptr->operation              = DML_OP_BATCH;
     dml_job_ptr->destination_first_ptr  = batch_buffer_ptr;
     dml_job_ptr->destination_length     = batch_buffer_length;
+    dml_job_ptr->numa_id                = node;
 
     for (int i = 0; i < batch_size; i++) {
-        status = dml_batch_set_mem_move_by_index(dml_job_ptr, i, src + (i * buffer_size), dest + (i * buffer_size), buffer_size, DML_FLAG_COPY_ONLY);
+        status = dml_batch_set_mem_move_by_index(dml_job_ptr, i, src + (i * buffer_size), dest + (i * buffer_size), buffer_size, DML_FLAG_COPY_ONLY | DML_FLAG_BLOCK_ON_FAULT);
         if (DML_STATUS_OK != status) {
             printf("An error (%u) occurred during job batching.\n", status);
             dml_finalize_job(dml_job_ptr);
@@ -323,9 +410,11 @@ int dsa_batched_async_copy(void *dest, void *src, uint64_t region_size, uint64_t
     uint64_t k = 0;
     for( uint64_t i = 0; i < region_size; i += size) {
         if (remainder > 0 && k == num_batches - 1) {
-            job_arr[k] = _dsa_async_batch_copy_start(dest + i, src + i, VMEM_PAGE_SIZE, execution_path, job_size, remainder, i % 4);
+            job_arr[k] = _dsa_async_batch_copy_start(dest + i, src + i, VMEM_PAGE_SIZE, execution_path, job_size, remainder, k % 8);
+/*             job_arr[k] = _dsa_async_batch_copy_start(dest + i, src + i, VMEM_PAGE_SIZE, execution_path, job_size, remainder, node); */
         } else {
-            job_arr[k] = _dsa_async_batch_copy_start(dest + i, src + i, VMEM_PAGE_SIZE, execution_path, job_size, MAX_BATCH_SIZE, i % 4);
+            job_arr[k] = _dsa_async_batch_copy_start(dest + i, src + i, VMEM_PAGE_SIZE, execution_path, job_size, MAX_BATCH_SIZE, k % 8);
+/*             job_arr[k] = _dsa_async_batch_copy_start(dest + i, src + i, VMEM_PAGE_SIZE, execution_path, job_size, MAX_BATCH_SIZE, node); */
         }
         if (job_arr[k] == NULL) {
             return 1;
@@ -335,6 +424,7 @@ int dsa_batched_async_copy(void *dest, void *src, uint64_t region_size, uint64_t
     }
 
     while (num_jobs_running > 0) {
+/*         printf("num_jobs_running: %d\n", num_jobs_running); */
         for (uint64_t i = 0; i < dml_arr_size; i++) {
             if (job_arr[i] != NULL && dml_check(job_arr[i]) == 1) {
                 if (_dsa_async_batch_copy_end(job_arr[i]) == 1) {

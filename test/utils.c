@@ -42,7 +42,10 @@ void print_time_stats(uint64_t dur, ssize_t region_size, int color) {
     nr_hpages  = (region_size / VMEM_H_PAGE_SIZE);
 
 #ifdef VERBOSE
-    if (color == 1) {
+    if (color == 2) {
+        printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f    GB/s:\033[0;33m %10.2f \033[0m\n",
+            ns2us(dur), (ns2us(dur) / nr_vpages), (ns2us(dur) / nr_hpages), (region_GBs / seconds));
+    } else if (color == 1) {
         printf("done. elapsed us: %12.2f    per-vpage us: %10.2f    per-hpage us: %10.2f    GB/s:\033[0;32m %10.2f \033[0m\n",
             ns2us(dur), (ns2us(dur) / nr_vpages), (ns2us(dur) / nr_hpages), (region_GBs / seconds));
     } else {
@@ -79,7 +82,7 @@ void populate_region(void *region, ssize_t region_size, char val) {
     dur = getns() - start;
 
 #ifdef VERBOSE
-    print_time_stats(dur, region_size, 0);
+    print_time_stats(dur, region_size, 2);
 #endif
 }
 

@@ -13,9 +13,11 @@
 #include <sys/mman.h>
 
 #define DRAM_NODEMASK    (0x1ul)  //Node 0
+// #define DRAM_NODEMASK    (0x20ul)  //Node 0
 // #define PMEM_NODEMASK    (0x1ul)  //Node 0
 // #define PMEM_NODEMASK    (0x2ul) //Node 1
-#define PMEM_NODEMASK    (0x10ul) //Node 4
+// #define PMEM_NODEMASK    (0x10ul) //Node 4
+#define PMEM_NODEMASK    (0x20ul) //Node 5
 
 // #define MAX_NODEMASK (0x3ul) //Node1
 #define MAX_NODEMASK (0xfful) //Node4
@@ -24,14 +26,15 @@
 // #define PMEM_NODE        0
 // #define PMEM_NODE        1
 // #define PMEM_NODE        2
-#define PMEM_NODE        4
+// #define PMEM_NODE        4
+#define PMEM_NODE        5
 
 #define VMEM_PAGE_SIZE   4096       //4KB
 // #define VMEM_PAGE_SIZE   1048576    //1MB
 // #define VMEM_PAGE_SIZE   2097152    //2MB
 // #define VMEM_PAGE_SIZE   1073741824 //1GB
 
-// #define VERBOSE
+#define VERBOSE
 
 #define VMEM_H_PAGE_SIZE 4096 //4k
 #define MAX_JOBS         16
