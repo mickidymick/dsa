@@ -6,17 +6,20 @@ clean:
 rebuild: clean all
 
 dsa: dsa_test.c
-	gcc -o3 dsa_test.c utils.c dsa.c -Iinclude -o dsa_test -Linclude -lm -lnuma -ldml -lstdc++
+	gcc -o3 dsa_test.c utils.c dsa.c -Iinclude -I/homes/jmcmicha/.local/include/dml -o dsa_test -L/homes/jmcmicha/.local/lib -lm -lnuma -ldml -lstdc++
 # 	gcc -g dsa_test.c utils.c dsa.c -Iinclude -o dsa_test -Linclude -lm -lnuma -ldml -lstdc++ -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer
 
 test: dsa_test
 	@sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"
+# 	@export DML_DSA_PATH=/dev/dsa
+# 	sudo dmesg | grep -i dmar
 # 	@echo 3 | sudo tee -a /proc/sys/vm/drop_caches > /dev/null
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 1 ./dsa_test 1
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 1 ./dsa_test 8
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 60 ./dsa_test 8
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 1 ./dsa_test 32
 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 1 ./dsa_test 128
+# 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 1 strace -e mmap -k ./dsa_test 128
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 60 ./dsa_test 128
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 1 ./dsa_test 512
 # 	@LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 taskset --cpu-list 60 ./dsa_test 512

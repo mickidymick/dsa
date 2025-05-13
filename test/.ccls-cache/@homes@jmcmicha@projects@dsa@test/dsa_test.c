@@ -13,6 +13,7 @@
 /* #define DSA_THREADED_ASYNC */
 
 int main(int argc, char *argv[]) {
+    int       numa_node;
     int       i;
     int       status;
     char     *c;
@@ -28,7 +29,7 @@ int main(int argc, char *argv[]) {
     }
 
     region_size = atoll(argv[1]) * (1024L * 1024L);
-/*     region_size = 126976; */
+/*     region_size = 4096 * 4; */
     r1_value = r2_value_mig = 0;
     status = 0;
 
@@ -49,9 +50,9 @@ int main(int argc, char *argv[]) {
 #endif
     free(c);
 
-    if (_dsa_init((int)DRAM_NODE, (int)PMEM_NODE) == 1) {
-        return 1;
-    }
+#ifndef MEMCPY
+    if (_dsa_init((int)DRAM_NODE, (int)PMEM_NODE) == 1) { return 1; }
+#endif
 
 #ifdef VERBOSE
     printf("Allocate Region1 ........................ "); fflush(stdout);
@@ -73,6 +74,12 @@ int main(int argc, char *argv[]) {
 #endif
     region4 = allocate(region_size, (int)DRAM_NODE);
 
+/*     numa_node = -1; */
+/*     get_mempolicy(&numa_node, NULL, 0, (void *)region1, MPOL_F_NODE | MPOL_F_ADDR); */
+/*     printf("Region1 allocated on node: %d\n", numa_node); */
+/*     get_mempolicy(&numa_node, NULL, 0, (void *)region2, MPOL_F_NODE | MPOL_F_ADDR); */
+/*     printf("Region2 allocated on node: %d\n", numa_node); */
+
 #ifdef VERBOSE
     printf("populating region1 (pre-fault) .......... "); fflush(stdout);
 #endif
@@ -82,6 +89,12 @@ int main(int argc, char *argv[]) {
     printf("populating region2 (pre-fault) .......... "); fflush(stdout);
 #endif
     populate_region(region2, region_size, 0);
+
+/*     numa_node = -1; */
+/*     get_mempolicy(&numa_node, NULL, 0, (void *)region1, MPOL_F_NODE | MPOL_F_ADDR); */
+/*     printf("Region1 allocated on node: %d\n", numa_node); */
+/*     get_mempolicy(&numa_node, NULL, 0, (void *)region2, MPOL_F_NODE | MPOL_F_ADDR); */
+/*     printf("Region2 allocated on node: %d\n", numa_node); */
 
 #ifdef VERBOSE
     printf("populating region3 (pre-fault) .......... "); fflush(stdout);
@@ -107,6 +120,7 @@ int main(int argc, char *argv[]) {
 /*     if (_dsa_init((int)DRAM_NODE, (int)PMEM_NODE) == 1) { */
 /*         return 1; */
 /*     } */
+
 /*     int startup_size = VMEM_PAGE_SIZE * 2; */
 /*     int startup_size = region_size; */
 /* #ifdef VERBOSE */
@@ -186,7 +200,6 @@ int main(int argc, char *argv[]) {
     printf("migrating region1 down dsa_batched_async. "); fflush(stdout);
 #endif
     start = getns();
-
     status = dsa_batched_async_copy(region2, region1, region_size, VMEM_PAGE_SIZE);
 #endif
 

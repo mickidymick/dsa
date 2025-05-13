@@ -16,18 +16,19 @@
 // #define DRAM_NODEMASK    (0x20ul)  //Node 0
 // #define PMEM_NODEMASK    (0x1ul)  //Node 0
 // #define PMEM_NODEMASK    (0x2ul) //Node 1
-// #define PMEM_NODEMASK    (0x10ul) //Node 4
-#define PMEM_NODEMASK    (0x20ul) //Node 5
+#define PMEM_NODEMASK    (0x10ul) //Node 4
+// #define PMEM_NODEMASK    (0x20ul) //Node 5
 
 // #define MAX_NODEMASK (0x3ul) //Node1
-#define MAX_NODEMASK (0xfful) //Node4
+// #define MAX_NODEMASK (0xfful) //Node4
+#define MAX_NODEMASK 9 //Node4
 
 #define DRAM_NODE        0
 // #define PMEM_NODE        0
 // #define PMEM_NODE        1
 // #define PMEM_NODE        2
-// #define PMEM_NODE        4
-#define PMEM_NODE        5
+#define PMEM_NODE        4
+// #define PMEM_NODE        5
 
 #define VMEM_PAGE_SIZE   4096       //4KB
 // #define VMEM_PAGE_SIZE   1048576    //1MB
@@ -38,7 +39,7 @@
 
 #define VMEM_H_PAGE_SIZE 4096 //4k
 #define MAX_JOBS         16
-#define MAX_BATCH_SIZE   128
+#define MAX_BATCH_SIZE   512
 
 uint64_t getns(void);
 double   ns2us(uint64_t ns);
